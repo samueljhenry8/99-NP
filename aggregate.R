@@ -1,4 +1,8 @@
-### Aggregate items pairwise
+### Aggregate items pairwise - uses 'comb' df formed in SortingOutData3.R
+
+# require("tidyverse")
+# require(psych)
+# require(corrr)
 
 ## ag function:
 # 1) Creates (returns) new variable, a combination of the two items
@@ -6,10 +10,6 @@
 # df: combined item scores to use to create nuance
 # item1 & item2: item names in "" (must be exact)
 # rev1, rev2: logical, reverses the value of item 1 or 2, respectively
-
-require("tidyverse")
-require(psych)
-require(corrr)
 
 ag = function(df,item1,item2, rev1=FALSE, rev2=FALSE){
   i1 = df[,item1] %>% scale

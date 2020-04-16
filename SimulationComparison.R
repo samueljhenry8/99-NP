@@ -1,5 +1,5 @@
 
-### Simulation Comparison
+### Simulation Comparison with Data Smoothing
 
 foo2 = function(x, folds=2) {
   s = sample(folds, nrow(x), replace=T)
