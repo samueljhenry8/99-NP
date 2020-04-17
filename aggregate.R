@@ -1,8 +1,9 @@
 ### Aggregate items pairwise - uses 'comb' df formed in SortingOutData3.R
 
-# require("tidyverse")
-# require(psych)
-# require(corrr)
+require("tidyverse")
+require(psych)
+require(corrr)
+require(magrittr)
 
 ## ag function:
 # 1) Creates (returns) new variable, a combination of the two items
@@ -283,24 +284,40 @@ pairs2 <- pairs %>% unite(col = "names", y:x, sep = "; ")
 nuances <- merge(nuances, pairs1, by="names", all.x=T)
 nuances <- merge(nuances, pairs2, by="names", all.x=T)
 
-nuances <- nuances %>% mutate("Intercorrelations" = coalesce(r.x, r.y)) %>%
-  select("names", "rTT", "Intercorrelations")
+nuances <- nuances %>% mutate("Intercorrelations" = coalesce(r.x, r.y)) %>% select("names", "rTT", "Intercorrelations")
+
+# Add reliability-corrected intra-nuance correlations
+pairsReliabilityCorrected1 <- pairs %>% unite(col = "names", x:y, sep = "; ") %>% select("names", "reliabCorrectCorrelations")
+pairsReliabilityCorrected2 <- pairs %>% unite(col = "names", y:x, sep = "; ") %>% select("names", "reliabCorrectCorrelations")
+
+nuances <- merge(nuances, pairsReliabilityCorrected1, by="names", all.x=T)
+nuances <- merge(nuances, pairsReliabilityCorrected2, by="names", all.x=T)
+
+nuances <- nuances %>% mutate("reliabCorrectCorrelations" = coalesce(reliabCorrectCorrelations.x, reliabCorrectCorrelations.y)) %>% select("names", "rTT", "Intercorrelations", "reliabCorrectCorrelations")
+
 
 nuances = nuances %>% separate(names, into = c("item1", "item2"), sep = "; ")
 nuances$item1_rTT <- rscomb[nuances$item1]
 nuances$item2_rTT <- rscomb[nuances$item2]
 
-(leftovers <- as.matrix(rscomb[names(new[, 1:69])])) %>% summary
+nuances = nuances %>% as.tbl %>% arrange(desc(abs(reliabCorrectCorrelations)))
+
+(leftovers <- as.matrix(rscomb[names(new[, 1:69])])) # %>% summary
 
 head(nuances)
-# write.csv(nuances, "nuances.csv")
+write.csv(nuances, "nuances.csv")
+
+table(nuances$rTT <.80)
+summary(nuances)
 
 with(nuances, cor(abs(Intercorrelations), rTT))
 with(nuances, cor(abs(Intercorrelations), ((item2_rTT + item1_rTT)/2)))
 with(nuances, cor(rTT, item2_rTT))
 with(nuances, cor(rTT, item1_rTT))
 with(nuances, cor(item1_rTT, item2_rTT))
+nuances %$% cor(abs(Intercorrelations), abs(reliabCorrectCorrelations))
+nuances %$% cor(abs(reliabCorrectCorrelations), rTT)
 
-mean_rTT <- ((nuances$item2_rTT + nuances$item1_rTT)/2)
-
-lm(rTT ~ abs(Intercorrelations) * mean_rTT, data = nuances) %>% summary
+lm(rTT ~ abs(Intercorrelations), data = nuances) %>% summary
+lm(rTT ~ abs(reliabCorrectCorrelations), data = nuances) %>% summary
+# Corrected correlations do not predict nuance rTT (but non-corrected do) 
