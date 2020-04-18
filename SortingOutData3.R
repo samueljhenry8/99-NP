@@ -189,19 +189,24 @@ reliabMatrix = (cbind(rscomb) %*% rbind(rscomb)) %>% sqrt # use to correct inter
 
 comb = (part1comb[,-1] + part2comb[,-1]) / 2
 
+# reliabCorrect = (cor(scale(comb), use = "pairwise") / reliabMatrix) %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r)))
+
 require("corrr")
 (pairs <- cor(scale(comb), use = "pairwise") %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r))))
 
 pairs$item1_rTT <- rscomb[pairs$x]
 pairs$item2_rTT <- rscomb[pairs$y]
+pairs$reliabCorrectCorrelations <- with(pairs, (r / ((sqrt(item1_rTT*item2_rTT)))))
+pairs <- as.tbl(pairs) %>% arrange(desc(abs(pairs$reliabCorrectCorrelations)))
+
 # write.csv(pairs, "ItemPairCorrelations.csv")
 
 # correlation(comb[,rscomb > .80]) %>% arrange(desc(abs(r))) %>% select(-Method, t, df)
 
-# Pairs corrected for reliability
-reliabCorrectCorelations = (((cor(part1comb[,-1], use="pairwise") +  cor(part2comb[,-1], use="pairwise")) / 2)  / reliabMatrix ) %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r)))
+## Pairs corrected for reliability
+# reliabCorrectCorrelations = (((cor(part1comb[,-1], use="pairwise") +  cor(part2comb[,-1], use="pairwise")) / 2)  / reliabMatrix ) %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r)))
 
-head(reliabCorrectCorelations,20)
+# head(reliabCorrectCorrelations,20)
 
 
 ## test retest of nuances (2, 3-item combinations)
