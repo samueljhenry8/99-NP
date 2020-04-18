@@ -155,3 +155,4 @@ demo$`Student Status` <- student.d
 ## Delete all but necessary data
 rm(list = ls()[!ls() %in% c("part1all","part2all", "outcomesR", "demo")])
 
+save.image("Data.RData")
