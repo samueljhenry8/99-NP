@@ -1,9 +1,14 @@
 ### Aggregate items pairwise - uses 'comb' df formed in SortingOutData3.R
 
-require("tidyverse")
-require(psych)
+require(tidyverse)
+require("psychTools")
+require("psych")
+require(tidyverse)
 require(corrr)
+require(glmnet)
 require(magrittr)
+
+load("Data.RData")
 
 ## ag function:
 # 1) Creates (returns) new variable, a combination of the two items
@@ -41,10 +46,20 @@ ag_rtt = function(df1,df2,item1,item2, rev1=FALSE, rev2=FALSE){
   rtt = (i11 + i21) %>% cor(i12 + i22, use = "pairwise")
 }
 
-cor(comb) %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r))) %>% head(20)
-
 comb = (part1comb[,-1] + part2comb[,-1]) / 2
-new <- comb
+comb$PID = part1comb$PID
+
+rscomb = cor(part1comb[,2:258], part2comb[,2:258], use="pairwise") %>% diag
+
+pairs <- cor(scale(comb[,-258]), use = "pairwise") %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r)))
+
+
+pairs$item1_rTT <- rscomb[pairs$x]
+pairs$item2_rTT <- rscomb[pairs$y]
+pairs$reliabCorrectCorrelations <- with(pairs, (r / ((sqrt(item1_rTT*item2_rTT)))))
+pairs <- as.tbl(pairs) %>% arrange(desc(abs(pairs$reliabCorrectCorrelations)))
+
+new <- comb[, -258] # remove PIDs
 
 #### NEW
 # N
@@ -143,10 +158,10 @@ new = ag(new, "Enjoy flirting", "Dont think much about sex", rev2 = T)
 new = ag(new, "Am a spiritual person", "Dont consider myself religious", rev2 = T)
 new = ag(new, "Wear stylish clothing", "Love to look my best")
 new = ag(new, "Love luxury", "Am mainly interested in money")
-new = ag(new, "Do things that men traditionally do", "Do things that women traditionally do", rev2=T)
+# new = ag(new, "Do things that men traditionally do", "Do things that women traditionally do", rev2=T)
 new = ag(new, "Believe in the power of fate", "Believe that all events can be explained scientifically", rev2 = T)
-new = ag(new, "Believe that by working hard a person can achieve anything", "Believe that some people are born lucky", rev2 = T)
-new = ag(new, "Worry about my health", "Consider myself healthy for my age", rev2 = T)
+# new = ag(new, "Believe that by working hard a person can achieve anything", "Believe that some people are born lucky", rev2 = T)
+# new = ag(new, "Worry about my health", "Consider myself healthy for my age", rev2 = T)
 new = ag(new, "Am always busy", "Have too many things to do")
 new = ag(new, "Rebel against authority", "Like to be viewed as proper and conventional", rev2 = T)
 new = ag(new, "Believe in the importance of tradition", "Think good manners are very important")
@@ -259,10 +274,10 @@ ag_rtt(part1comb, part2comb, "Enjoy flirting", "Dont think much about sex", rev2
 ag_rtt(part1comb, part2comb, "Am a spiritual person", "Dont consider myself religious", rev2 = T),
 ag_rtt(part1comb, part2comb, "Wear stylish clothing", "Love to look my best"),
 ag_rtt(part1comb, part2comb, "Love luxury", "Am mainly interested in money"),
-ag_rtt(part1comb, part2comb, "Do things that men traditionally do", "Do things that women traditionally do", rev2=T),
+# ag_rtt(part1comb, part2comb, "Do things that men traditionally do", "Do things that women traditionally do", rev2=T),
 ag_rtt(part1comb, part2comb, "Believe in the power of fate", "Believe that all events can be explained scientifically", rev2 = T),
-ag_rtt(part1comb, part2comb, "Believe that by working hard a person can achieve anything", "Believe that some people are born lucky", rev2 = T),
-ag_rtt(part1comb, part2comb, "Worry about my health", "Consider myself healthy for my age", rev2 = T),
+# ag_rtt(part1comb, part2comb, "Believe that by working hard a person can achieve anything", "Believe that some people are born lucky", rev2 = T),
+# ag_rtt(part1comb, part2comb, "Worry about my health", "Consider myself healthy for my age", rev2 = T),
 ag_rtt(part1comb, part2comb, "Am always busy", "Have too many things to do"),
 ag_rtt(part1comb, part2comb, "Rebel against authority", "Like to be viewed as proper and conventional", rev2 = T),
 ag_rtt(part1comb, part2comb,"Believe in the importance of tradition", "Think good manners are very important"),
@@ -274,7 +289,8 @@ ag_rtt(part1comb, part2comb, "Am good at understanding others feelings", "Know h
 ag_rtt(part1comb, part2comb, "Get suspicious when someone treats me nicely", "Often feel that others laugh or talk about me"),
 ag_rtt(part1comb, part2comb, "Dont hesitate to express an unpopular opinion", "Tell others what I really think"), #new = ag(new, "Believe that the poor deserve our sympathy", "Cant stand weak people", rev2=T)
 ag_rtt(part1comb, part2comb, "Am usually a patient person", "Hate waiting for anything", rev2 = T)
-)) %>% cbind(names(new[, 70:ncol(new)]))
+)) %>% cbind(names(new[, 76:ncol(new)]))
+
 names(nuances) = c("rTT", "names")
 
 # Some items reversed in intercorrelations: create dfs with ';'-separated pairs in both orders
@@ -302,13 +318,13 @@ nuances$item2_rTT <- rscomb[nuances$item2]
 
 nuances = nuances %>% as.tbl %>% arrange(desc(abs(reliabCorrectCorrelations)))
 
-(leftovers <- as.matrix(rscomb[names(new[, 1:69])])) # %>% summary
+leftovers <- as.matrix(rscomb[names(new[, 1:75])]) # col index = 1:last item before nuances
 
 head(nuances)
-write.csv(nuances, "nuances.csv")
+# write.csv(nuances, "nuances.csv")
 
-table(nuances$rTT <.80)
-summary(nuances)
+# table(nuances$rTT <.80)
+# summary(nuances)
 
 with(nuances, cor(abs(Intercorrelations), rTT))
 with(nuances, cor(abs(Intercorrelations), ((item2_rTT + item1_rTT)/2)))
@@ -321,3 +337,8 @@ nuances %$% cor(abs(reliabCorrectCorrelations), rTT)
 lm(rTT ~ abs(Intercorrelations), data = nuances) %>% summary
 lm(rTT ~ abs(reliabCorrectCorrelations), data = nuances) %>% summary
 # Corrected correlations do not predict nuance rTT (but non-corrected do) 
+
+
+rm(list = ls()[!ls() %in% c("nuances","comb", "new", "rscomb")])
+
+save.image("aggregate.RData")

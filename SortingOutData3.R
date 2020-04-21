@@ -12,7 +12,7 @@ part12 = readxl::read_excel("RTestBatch2Part1.xlsx")   %>% filter(!is.na(`PID`))
 part22 = readxl::read_excel("RTestBatch2Part2.xlsx")   %>% filter(!is.na(`PID`))
 part13 = read_csv("RTestBatch3Part1.csv")
 part23 = read_csv("RTestBatch3Part2.csv")
-outcomes = read_csv("outcomes_all1.csv") %>% filter(!is.na(`PID`))
+outcomes = read_csv("outcomes_all1.csv") %>% filter(!is.na(`PID`)) %>% filter(!duplicated(`PID`))
 
 ## Sort Batches 1 to 3, calculate profile correlations
 
@@ -179,7 +179,6 @@ tmp2 = part2 %>% select("PID", "Easily apologize when I have been wrong","Consid
 part1comb = merge(part1comb, tmp1, by = "PID", all.x = T) 
 part2comb = merge(part2comb, tmp2, by = "PID", all.x = T)
 
-
 (rscomb = cor(part1comb[,2:258], part2comb[,2:258], use="pairwise") %>% diag) %>% summary
 # write.csv(rscomb, "rTTs.csv")
 
@@ -278,18 +277,40 @@ comb.ee$PID = part1comb.ee$PID
 
 comb1 = cbind(part1comb$PID, ((part1comb[,-1] + part2comb[,-1]) / 2))
 
-### Filter all other outcomes 
-outcomesR = outcomes %>% filter(`PID` %in% comb.ee$PID) %>% arrange(`PID`) # %>% filter((!duplicated(`PID`)))
-head(outcomesR)
-# %>% filter(`PID` %in% part2comb$`PID`) 
-
-
 ### Add Extra Prolific Information
-demo <- readxl::read_xlsx("ProlificDemographics.xlsx")
-head(demo)
+demo <- readxl::read_xlsx("ProlificDemographics.xlsx") %>% filter(`PID` %in% part1comb$PID) %>% filter(!duplicated(PID))
+
 
 sex.d <- ifelse(demo$Sex=="Female", 1, 2)
 demo$Sex <- sex.d
 student.d <-ifelse(demo$`Student Status`=="Yes", 1, 0)
 demo$`Student Status` <- student.d
 # emp.d <- ifelse(demo$`Employment Status`== "Full-Time", 1, )
+
+### Filter all other outcomes 
+outcomesR = outcomes %>% filter(`PID` %in% part1comb$PID) %>% filter(!duplicated(PID))
+
+outcomesR = outcomesR %>% merge(demo, by = "PID", all.x = T)
+# Consolidate two age columns
+outcomesR$Age = rowMeans(cbind(outcomesR$Age.x, outcomesR$Age.y), na.rm = T)
+outcomesR$Age.x = NULL
+outcomesR$Age.y = NULL
+outcomesR$Age = ifelse(outcomesR$Age == "NaN", NA, outcomesR$Age)
+
+outcomesR$Gender = NULL # Use "Sex" from Prolific
+outcomesR$EnglishNative = outcomesR %$% ifelse(`First Language`== "English", 1, 0)
+
+outcomesR$EmployStatus <- outcomesR %$% ifelse(`Employment Status` == "Due to start a new job within the next month", 2, outcomesR$EmployStatus )
+
+# 
+unemployed1 = outcomesR %$% ifelse(`Employment Status` == c("Not in paid work (e.g. homemaker', 'retired or disabled)"), 0, NA)
+unemployed2 = outcomesR %$% ifelse(`Employment Status` == c("Unemployed (and job seeking)"), 0, NA)
+PT = outcomesR %$% ifelse(`Employment Status` == c("Part-Time"), 1, NA)
+FT = outcomesR %$% ifelse(`Employment Status` == c("Full-Time"), 2, NA)
+
+outcomesR$EmployStatusSpec <- coalesce(unemployed1, unemployed2, PT, FT)
+
+outcomesR$EmployDurationYrs <- ifelse(outcomesR$EmployDurationYrs == 0, NA, outcomesR$EmployDurationYrs)
+
+
+rm(list = ls()[!ls() %in% c("part1all","part2all", "outcomesR", "part1comb", "part2comb", "pairs", "rscomb")])
