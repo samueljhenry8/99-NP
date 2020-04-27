@@ -317,8 +317,7 @@ nuances$item1_rTT <- rscomb[nuances$item1]
 nuances$item2_rTT <- rscomb[nuances$item2]
 
 nuances = nuances %>% as.tbl %>% arrange(desc(abs(reliabCorrectCorrelations)))
-
-leftovers <- as.matrix(rscomb[names(new[, 1:75])]) # col index = 1:last item before nuances
+leftovers <- rscomb[names(new[, 1:75])] %>% sort(decreasing = T)  # col index = 1:last item before nuances
 
 head(nuances)
 # write.csv(nuances, "nuances.csv")
@@ -339,6 +338,6 @@ lm(rTT ~ abs(reliabCorrectCorrelations), data = nuances) %>% summary
 # Corrected correlations do not predict nuance rTT (but non-corrected do) 
 
 
-rm(list = ls()[!ls() %in% c("nuances","comb", "new", "rscomb")])
+rm(list = ls()[!ls() %in% c("nuances","comb", "new", "rscomb", "leftovers")])
 
 save.image("aggregate.RData")
