@@ -342,3 +342,7 @@ lm(rTT ~ abs(reliabCorrectCorrelations), data = nuances) %>% summary
 rm(list = ls()[!ls() %in% c("nuances","comb", "new", "rscomb")])
 
 save.image("aggregate.RData")
+
+nuances %>% arrange(desc(abs(reliabCorrectCorrelations))) %>% 
+  mutate_if(is.numeric, ~round(.x, 2)) %>% slice(1:100) %>% View
+
