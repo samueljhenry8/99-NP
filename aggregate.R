@@ -8,7 +8,16 @@ require(corrr)
 require(glmnet)
 require(magrittr)
 
-load("Data.RData")
+load("Data.RData") 
+# loads cleaned retest data, parts 1 and 2 (all items and current list). 
+# part1comb & part2comb compile responses for the most up-to-date item-list we use. 
+# get item retest reliability by correlating them (use = "pairwise") and taking the diagonal
+
+load("crossRater99NP.RData") 
+# loads cleaned self and informant data, plus rCA values and rCA-corrected inter-item correlations
+# get a paired item list with: "tmp7 %>% as_cordf %>% stretch %>% arrange(desc(abs(r))) %>% filter(!duplicated(r)) # %>% slice(1:100)"
+
+
 
 ## ag function:
 # 1) Creates (returns) new variable, a combination of the two items
@@ -28,7 +37,7 @@ ag = function(df,item1,item2, rev1=FALSE, rev2=FALSE){
   return(df)
 }
 
-## ag_rtt returns the retest reliability of any 2-item nuance
+## ag_rtt: returns the retest reliability of any 2-item nuance
 
 # df1 & df2: data frames of item scores at t1 and t2
 # item1 & item2: item names in "" (must be exact)
@@ -47,21 +56,25 @@ ag_rtt = function(df1,df2,item1,item2, rev1=FALSE, rev2=FALSE){
 }
 
 comb = (part1comb[,-1] + part2comb[,-1]) / 2
-comb$PID = part1comb$PID
+comb$PID = part1comb$PID # need PID to match up across datasets
 
 rscomb = cor(part1comb[,2:258], part2comb[,2:258], use="pairwise") %>% diag
 
-pairs <- cor(scale(comb[,-258]), use = "pairwise") %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r)))
+pairs <- cor(scale(comb[,-258]), use = "pairwise") %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r))) # all paired correlations (uncorrected), arranged by highest absolute value
 
-
+# add item rTTs
 pairs$item1_rTT <- rscomb[pairs$x]
 pairs$item2_rTT <- rscomb[pairs$y]
-pairs$reliabCorrectCorrelations <- with(pairs, (r / ((sqrt(item1_rTT*item2_rTT)))))
-pairs <- as.tbl(pairs) %>% arrange(desc(abs(pairs$reliabCorrectCorrelations)))
+
+pairs$reliabCorrectCorrelations <- with(pairs, (r / ((sqrt(item1_rTT*item2_rTT))))) # correct pairs for rTT
+pairs <- as.tbl(pairs) %>% arrange(desc(abs(pairs$reliabCorrectCorrelations))) # all paired correlations (corrected), arranged by highest absolute value
 
 new <- comb[, -258] # remove PIDs
 
-#### NEW
+
+
+
+### Form nuances
 # N
 new = ag(new, item1 = "Am always worried about something", item2 = "Rarely worry", rev2 = T)
 new = ag(new, "Am nervous or tense most of the time", "Am relaxed most of the time", rev2=T)
@@ -293,6 +306,11 @@ ag_rtt(part1comb, part2comb, "Am usually a patient person", "Hate waiting for an
 
 names(nuances) = c("rTT", "names")
 
+### END NUANCE GENERATION
+
+
+## merge some additional descriptives with the nuance list
+
 # Some items reversed in intercorrelations: create dfs with ';'-separated pairs in both orders
 pairs1 <- pairs %>% unite(col = "names", x:y, sep = "; ")
 pairs2 <- pairs %>% unite(col = "names", y:x, sep = "; ")
@@ -316,7 +334,9 @@ nuances = nuances %>% separate(names, into = c("item1", "item2"), sep = "; ")
 nuances$item1_rTT <- rscomb[nuances$item1]
 nuances$item2_rTT <- rscomb[nuances$item2]
 
+# can use this to reset order to whichever variable you want
 nuances = nuances %>% as.tbl %>% arrange(desc(abs(reliabCorrectCorrelations)))
+
 leftovers <- rscomb[names(new[, 1:75])] %>% sort(decreasing = T)  # col index = 1:last item before nuances
 
 head(nuances)
@@ -324,6 +344,8 @@ head(nuances)
 
 # table(nuances$rTT <.80)
 # summary(nuances)
+
+# can mostly ignore this, just looks at how different variables relate to one another
 
 with(nuances, cor(abs(Intercorrelations), rTT))
 with(nuances, cor(abs(Intercorrelations), ((item2_rTT + item1_rTT)/2)))
@@ -338,10 +360,10 @@ lm(rTT ~ abs(reliabCorrectCorrelations), data = nuances) %>% summary
 # Corrected correlations do not predict nuance rTT (but non-corrected do) 
 
 
-rm(list = ls()[!ls() %in% c("nuances","comb", "new", "rscomb", "leftovers")])
-
-save.image("aggregate.RData")
+rm(list = ls()[!ls() %in% c("nuances","comb", "new", "rscomb", "leftovers", "pairs")])
+save.image("aggregateNuances.RData")
 
 nuances %>% arrange(desc(abs(reliabCorrectCorrelations))) %>% 
   mutate_if(is.numeric, ~round(.x, 2)) %>% slice(1:100) %>% View
 
+# cor(part1comb[,-1], part2comb[, -1], use = "pairwise") 
