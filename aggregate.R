@@ -15,7 +15,8 @@ load("Data.RData")
 
 load("crossRater99NP.RData") 
 # loads cleaned self and informant data, plus rCA values and rCA-corrected inter-item correlations
-# get a paired item list with: "tmp7 %>% as_cordf %>% stretch %>% arrange(desc(abs(r))) %>% filter(!duplicated(r)) # %>% slice(1:100)"
+# get a paired item list with:
+crossRaterCorrected <- tmp7 %>% as_cordf %>% stretch %>% arrange(desc(abs(r))) %>% filter(!duplicated(r)) # %>% slice(1:100)"
 
 
 
@@ -58,9 +59,9 @@ ag_rtt = function(df1,df2,item1,item2, rev1=FALSE, rev2=FALSE){
 comb = (part1comb[,-1] + part2comb[,-1]) / 2
 comb$PID = part1comb$PID # need PID to match up across datasets
 
-rscomb = cor(part1comb[,2:258], part2comb[,2:258], use="pairwise") %>% diag
+rscomb = cor(part1comb[,2:258], part2comb[,2:258], use="pairwise") %>% diag 
 
-pairs <- cor(scale(comb[,-258]), use = "pairwise") %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r))) # all paired correlations (uncorrected), arranged by highest absolute value
+pairs  <- cor(scale(comb[,-258]), use = "pairwise") %>% as_cordf %>% shave %>% stretch() %>% arrange(desc(abs(r))) # all paired correlations (uncorrected), arranged by highest absolute value
 
 # add item rTTs
 pairs$item1_rTT <- rscomb[pairs$x]
