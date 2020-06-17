@@ -141,4 +141,4 @@ tmp = new %>% select(-contains(";"))
 
 red = node.redundant(tmp, sig = .01)
 
-red$redundant
+
