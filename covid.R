@@ -4,6 +4,7 @@ load("aggregate.RData")
 load("Data.RData")
 
 require(tidyverse)
+require(dplyr)
 require(psych)
 require(glmnet)
 require(corrr)
@@ -61,13 +62,56 @@ essentialCheck <- rbind(leftHome, seePeople, publicSpace, noDistance)[,1] %>% fi
 
 covid = covid %>% merge(outcomesR, by = "PID") %>% select(c("PID", "Age", "Sex", "Education", "Student Status", "Current Country of Residence", "Worried", "TimeWorried", "SocDisBelief", "LockBelief", "Stockpile", "leftHome1Week", "numPeople1Week", "pubSpace2Weeks", "SocDisPrac", "NatGovTrust", "LocGovTrust", "Traveled", "FollowNews"))
 
-covid$UKRes = covid %$% ifelse(`Current Country of Residence` == c("United Kingdom"), 1, 0)
-table(covid$`UKRes`)
+covid %$% ifelse(`Current Country of Residence` == c("United Kingdom"), 1, 0) %>% table
 covidCountry <- covid$`Current Country of Residence` %>% table
-covid$`Current Country of Residence` = NULL
 
-descriptives = describe(covid[,-1]) %>% round(3)
-lowerCor(covid[,-1])
+AUS = covid %$% ifelse(`Current Country of Residence` == "Australia", 70.91, NA)
+CAN = covid %$% ifelse(`Current Country of Residence` == "Canada", 76.73, NA)
+ISR = covid %$% ifelse(`Current Country of Residence` == "Israel", 89.41, NA)
+USA = covid %$% ifelse(`Current Country of Residence` == "United States", 68.41, NA)
+AST = covid %$% ifelse(`Current Country of Residence` == "Austria", 84.79, NA)
+BLG = covid %$% ifelse(`Current Country of Residence` == "Belgium", 83.6, NA)
+CZC = covid %$% ifelse(`Current Country of Residence` == "Czech Republic", 75.13, NA)
+EST = covid %$% ifelse(`Current Country of Residence` == "Estonia", 80.29, NA)
+FIN = covid %$% ifelse(`Current Country of Residence` == "Finland", 75.13, NA)
+FRA = covid %$% ifelse(`Current Country of Residence` == "France", 89.41, NA)
+GER = covid %$% ifelse(`Current Country of Residence` == "Germany", 74.61, NA)
+GRE = covid %$% ifelse(`Current Country of Residence` == "Greece", 87.96, NA)
+HUN = covid %$% ifelse(`Current Country of Residence` == "Hungary", 78.44, NA)
+ITA = covid %$% ifelse(`Current Country of Residence` == "Italy", 93.25, NA)
+MEX = covid %$% ifelse(`Current Country of Residence` == "Mexico", 85.45, NA)
+NED = covid %$% ifelse(`Current Country of Residence` == "Netherlands", 84.65, NA)
+NOR = covid %$% ifelse(`Current Country of Residence` == "Norway", 79.63, NA)
+POL = covid %$% ifelse(`Current Country of Residence` == "Poland", 83.6, NA)
+POR = covid %$% ifelse(`Current Country of Residence` == "Portugal", 86.64, NA)
+SLV = covid %$% ifelse(`Current Country of Residence` == "Slovenia", 91.93, NA)
+ESP = covid %$% ifelse(`Current Country of Residence` == "Spain", 89.41, NA)
+SWE = covid %$% ifelse(`Current Country of Residence` == "Sweden", 38.22, NA)
+SUI = covid %$% ifelse(`Current Country of Residence` == "Switzerland", 79.49, NA)
+UK = covid %$% ifelse(`Current Country of Residence` == "United Kingdom", 82.27, NA)
+
+covid$CountrySeverity = coalesce(AUS, AST, BLG, CAN, CZC, ESP, EST, FIN, FRA, GER, GRE, HUN, ISR, ITA, MEX, NED, NOR, POL, POR, SLV, SUI, SWE, UK, USA)
+
+# diff = TukeyHSD(aov(CountrySeverity ~ 1 + `Current Country of Residence`, data = covid)) %>% unlist %>% as.matrix(ncol = 2)
+# (covid$CountrySeverity < 68) %>% table
+# geom_boxplot(data = covid, mapping = aes(CountrySeverity))
+
+covid$CountrySeverity %>% summary()
+# covid$`Current Country of Residence` = NULL
+
+covid = covid %>% select(1:6, 20, 7:10, 15, 19, 16:18, everything())
+
+descriptives = describe(covid[,c(-1, -6)]) %>% round(3)
+lowerCor(covid[,c(-1,-6)])
+covid[, c(4,7:20)] = covid[, c(4,7:20)] %>% scale
+
+comb %>% apply(1, function(x) sum(is.na(x))) %>% table 
+# comb2 = comb %>% apply(1, function(x) count(is.na(x)) <5 )
+comb2 <- comb[rowSums(is.na(comb)) < 50, ]
+comb3 <- comb2 %>% merge(covid, by = "PID")
+comb3$PID %>% write.csv("PIDs.csv")
+
+
 
 ### Personality Data
 
@@ -95,15 +139,26 @@ covCombItem = merge(covid, combItem, by="PID", all.x=T) # all items
 covCombBigFive = merge(covid, bigFive, by="PID", all.x=T) 
 
 # Remove PIDs
-covCombItem <- covCombItem[,-1]
-covCombNuance <- covCombNuance[,-1] 
-covCombBigFive <- covCombBigFive[,-1] 
+covCombItem <- covCombItem[,-c(1, 6)]
+covCombNuance <- covCombNuance[,-c(1, 6)]
+covCombBigFive <- covCombBigFive[,-c(1, 6)] 
 
-# Create 
-interCor = cor(covCombItem[, 19:275], covCombItem[, 1:18], use = "pairwise") # all item-outcome correlations
-persCor = cor(interCor, use = "pairwise") %>% round(3) # "persome-wide" correlations: 
-# Phenotypic Corr
-phenoCor = cor(covid[, 2:19], use = "pairwise") %>% round(3)
+# Item-Outcome Correlations
+inter = corr.test(covCombItem[, 19:275], covCombItem[, 1:18], use = "pairwise", adjust = "fdr") # all item-outcome correlations
+interCor = inter$r
+interP = inter$p
+
+# profile correlations
+pers = corr.test(interCor, use = "pairwise", adjust = "fdr") # "persome-wide" correlations
+persCor = pers$r %>% round(3)
+persP = pers$p 
+persPOrdered = persP %>% t %>% as_cordf() %>% shave %>% stretch %>% arrange(desc(abs(r)))
+
+# Phenotypic Cor
+pheno = corr.test(covid[, c(2:5, 7:20)], use = "pairwise", adjust = "fdr")
+phenoCor = pheno$r %>% round(3)
+phenoP = pheno$p #%>% round(4) #%>% as_cordf() %>% shave
+phenoPOrdered = phenoP %>% t %>% as_cordf() %>% shave %>% stretch %>% arrange(desc(abs(r)))
 
 
 ut = function(x) x %>% t %>%  .[lower.tri(.)]
@@ -115,6 +170,20 @@ phenoPersCor %>% lt %>% abs %>% summary
 interCorNuance = cor(covCombNuance[, 19:117], covCombNuance[, 1:18], use = "pairwise") # all item-outcome correlations
 persCorNuance = cor(interCorNuance, use = "pairwise") # "persome-wide" correlations: 
 (phenoPersCorNuance = cor(phenoCor, persCorNuance, use = "pairwise") %>% diag)
+
+phenoCor %>% lt %>% abs %>% summary
+persCor %>% lt %>% abs %>% summary
+persCorNuance %>% lt %>% abs %>% summary
+
+
+# correlations
+corMat = (lowerUpper(phenoCor, persCor)) %>% corPlot(xlas = 3, numbers = T)
+y = lowerUpper(phenoCor, persCor)
+cor(lt(y), ut(y))
+# p-values
+(pVal = lowerUpper(phenoP, persP) %>% round(5)) 
+pVal %>% corPlot(xlas = 3, numbers = T)
+
 
 
 ### Variables created ==> Now make predictions
@@ -149,12 +218,14 @@ cvBigFive = cv(na.omit(covCombBigFive), folds = 5, criteria = 18) %>% cor(na.omi
 cvNuance = cv(medCovCombNuance, folds = 5, criteria = 18) %>% cor(covCombNuance[,1:18], use = "pairwise") %>% diag %>% as.data.frame
 cvItem = cv(medCovCombItem, folds = 5, criteria = 18) %>% cor(covCombItem[,1:18], use = "pairwise") %>% diag %>% as.data.frame
 
-itemBS <- bestScales(covCombItem,criteria=colnames(covCombItem)[1:18], folds=10, n.item=20,
-                 dictionary=covDict, cut=.05, overlap = F)
-# nuanceBS <- bestScales(covCombNuance,criteria=colnames(covCombNuance)[1:18], folds=10, n.item=20, dictionary=covNuanceDict ,cut=.05, overlap = F)
+itemBS <- bestScales(covCombItem,criteria=colnames(covCombItem)[1:18], folds=20, n.item=20, dictionary=covDict, cut=.05, overlap = F)
+nuanceBS <- bestScales(covCombNuance,criteria=colnames(covCombNuance)[1:18], folds=10, n.item=20, dictionary=covNuanceDict ,cut=.05, overlap = F)
 
-preds = cbind(cvItem, cvNuance, cvBigFive, itemBS$summary$final.valid) %>% round(3) %>% as.data.frame
-colnames(preds) = c("257 Items", "99 NP", "Big 5", "Item BS")
+# itemBSTest = bestScales(covCombItem,criteria=colnames(covCombItem)[1:18], folds=10, n.item=257, dictionary=covDict, cut=.01, overlap = F)
+# cbind(preds, itemBSTest$summary$final.valid)
+
+preds = cbind(cvItem, cvNuance, cvBigFive, itemBS$summary$final.valid, nuanceBS$summary$final.valid) %>% round(3) %>% as.data.frame
+colnames(preds) = c("257 Items", "99 NP", "Big 5", "Item BS", "Nuance BS")
 preds %>% summary
 
 
@@ -176,11 +247,19 @@ write.csv(cbind(
   itemBS$items$LocGovTrust$item,
   itemBS$items$Traveled$item,
   itemBS$items$FollowNews$item, 
-  itemBS$items$UKRes$item), 'itemsBS.csv')
+  itemBS$items$CountrySeverity$item), 'itemsBS.csv')
 
 
-bsItems = read.csv("itemsBsClean.csv") %>% t %>% table %>% as.data.frame()
+bsItems = read.csv("itemsBsClean.csv") %>% t %>% table %>% as.data.frame() %>% desc("Freq")
 # 114 items used in total
+write.csv(bsItems, "bsItemsFreq.csv")
+
+
+
+
+# dfi = for (i in 1:length(dfi)) lapply(dfi, function(x) names(paste(colnames(covCombItem[1:x]))))
+# for(i in 1:length(itemBS$items)) dfi = lapply(names(itemBS$items),function(x) itemBS$items[[x]][,c(7, 4, 5)]) 
+
 
 
 ### Data to report: 
@@ -189,52 +268,10 @@ preds %>% write.table(file = "preds.txt", sep = ",", eol = "\r\n", quote = F)
 
 preds %>% summary
 
-phenoCor %>% lt %>% abs %>% summary
-persCor %>% lt %>% abs %>% summary
-persCorNuance %>% lt %>% abs %>% summary
+# creates .txt files of bestScales tables including 1) item name, 2) mean r, and 3) SD
+dfi = lapply(itemBS$items, '[', c(7, 4, 5))
+names(dfi[1:18]) = colnames(covCombItem[1:18])
 
-
-lowerUpper(phenoCor, persCor) %>% corPlot(xlas = 3, numbers = T)
-y = lowerUpper(phenoCor, persCor)
-cor(lt(y), ut(y))
-
-
-
-# outcomePCA = covCombItem[, 5:17] %>% scale %>% pca(4) %$% scores
-# cvBigFivePCA = cv(c(outcomePCA, na.omit(covCombBigFive[])), folds = 5, criteria = 4) %>% cor(na.omit(covCombBigFive[,1:18]), use = "pairwise") %>% diag %>% as.data.frame
-# cvNuance = cv(medCovCombNuance, folds = 5, criteria = 18) %>% cor(covCombNuance[,1:18], use = "pairwise") %>% diag %>% as.data.frame
-# cvItem = cv(medCovCombItem, folds = 5, criteria = 18) %>% cor(covCombItem[,1:18], use = "pairwise") %>% diag %>% as.data.frame
-# 
-# # phenoCor %>% as_cordf %>% shave %>% stretch %>% arrange(desc(abs(r)))
-
-
-### Supplement: How many predictors 'survive' regularization in 257i, 99NP? 
-# X = as.matrix(medCovCombNuance[, c(19:117)])
-# Y = na.omit(medCovCombNuance$Traveled)
-# Z = cv.glmnet(x = X, y = Y)
-# 
-# Z$lambda
-# 
-# # CVs
-# 
-# # adjust the plot layout to make a two-panel plot
-# layout(rbind(1,2))
-# par(mar=c(3,3,2,1)+.1)
-# 
-# # coefficient path plot
-# plot(cv.glmnet(x = X, y = Y), xvar="lambda", xlim=c(-4,4), mgp=2:0)
-# 
-# # CV error plot
-# plot(CV, xlim=c(-4,4), mgp=2:0)
-# 
-
-
-# preds %>% gather %>% ggplot + geom_point(mapping = aes(x = key, y = value))
-# matplot(preds, xlab = 3, ylab = "Cross validation of elastic net modeling on 99NP data", pch = 15:19)
-# ggplot(data = preds) + 
-#   geom_point(mapping = aes(x = , y = hwy, color = ))
-# 
-# par(mfrow=c(1,1))
-
-## later: 
-# predictions, but using only the # of items in BS
+for (x in 1:length(dfi)) {
+  dfi[x] %>% unlist(recursive = F) %>% as.data.frame %>% as.tbl %>% mutate_if(is.numeric, round, 3) %>% write.table(file = paste(names(dfi[x]),".txt",sep=""), sep = ",", eol = "\r\n", quote = F, row.names = F)
+}
