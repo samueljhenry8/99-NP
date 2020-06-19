@@ -15,6 +15,9 @@ ag = function(df,item1,item2, rev1=FALSE, rev2=FALSE){
 Data = read_csv("CombinedT1SelfRatings.csv")
 new = Data %>% select(7:263) %>% replace_na(map(., median, na.rm=T)) 
 
+# item re-test reliabilities for reference
+rtt = cor(t1.ratings, t2.ratings, use = "pairwise") %>% diag
+
 new = ag(new, "Am always worried about something", "Rarely worry", rev2 = T)
 new = ag(new, "Am afraid of many things", "Am easily frightened")
 new = ag(new, "Get irritated easily", "Get angry easily")
@@ -136,18 +139,31 @@ new = ag(new, "Find it hard to forgive others", "Get back at people who insult m
 #new = ag(new, "Believe that by working hard a person can achieve anything", "Believe that some people are born lucky", rev2=T)
 # toughmindedness??
 
+### Sam (19/06/20)
+new = ag(new, "Make friends easily", "Feel comfortable around people")
+new = ag(new, "Care about others", "Cant be bothered with others needs", rev1 = T)
+new = ag(new, "Have a rich vocabulary", "Like to read")
+new = ag(new, "Like to visit new places", "Love excitement")
+new = ag(new, "Feel restless a lot of the time", "Am often bored")
+new = ag(new, "Am not embarrassed easily", "Dont mind others making fun of me")
+new = ag(new, "Dont think about mistakes that I have made", "Am often worried by things that I said or did") ## rtts both < .60
+
+new = ag(new, "Am a submissive person", "Cant stand confrontations") ## rTTs ~.68; both pair similarly well with other extant nuances
+new = ag(new, "Support liberal political candidates", "Believe that the poor deserve our sympathy") # + "Believe that we should be tough on crime", rev3 = T
+new = ag(new, "Do not like poetry", "Get deeply immersed in music", rev1 = T)
+new = ag(new, "Notice my emotions", "Try to understand myself") ## rTTs both < .60
+new = ag(new, "Admire a really clever scam", "Know how to get around the rules")
+
+
 new %>% select(-contains(";")) %>% cor %>% as_cordf %>% stretch %>% arrange(desc(abs(r))) %>% filter(!duplicated(r)) %>% slice(1:20)
 
-cors = new %>% cor %>% as_cordf %>% stretch %>% arrange(desc(abs(r))) %>% as.data.frame()
-cors$semi = !grepl(cors[,1], pattern = ";")
-cors = cors[cors[,4] == TRUE,]
-cors = cors %>% as_tibble %>% select(c("x", "y", "r")) %>% filter(!duplicated(r))
+cors = new %>% cor %>% as_cordf %>% stretch %>% arrange(desc(abs(r))) %>% as.data.frame
+(cors = cors %>% mutate(semi = !grepl(cors[,1], pattern = ";")) %>% filter(semi == T) %>% select("x", "y", "r") %>% filter(!duplicated(r))) %>% write.csv("cors.csv", row.names = F)
 
-tmp = new %>% select(-contains(";")) # leftovers (73)
-tmp2 = new %>% select(contains(";")) # 2-item nuances (92)
+tmp = new %>% select(-contains(";")) # leftovers 
+tmp2 = new %>% select(contains(";")) # 2-item nuances
 
-# red = node.redundant(tmp, sig = .01)
-
-redNet = red$network %>% round(3) %>% as_cordf() %>% shave %>% stretch %>% arrange(desc(abs(r)))
+### If we need to do follow-up redundancy analysis
+red = node.redundant(tmp, sig = .01)
+(redNet = red$network %>% round(3) %>% as_cordf() %>% shave %>% stretch %>% arrange(desc(abs(r)))) %>% write.csv("redNet.csv", row.names = F)
 # redRedund = node.redundant.combine(red, type = "sum")
-
