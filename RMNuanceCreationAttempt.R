@@ -33,7 +33,7 @@ new = ag(new, "Radiate joy", "Smile a lot")
 new = ag(new, "Love dangerous situations", "Take risks")
 new = ag(new, "Am always joking", "Have a great sense of humor")
 new = ag(new, "Dont mind being the center of attention", "Like to stand out in a crowd")
-new = ag(new, "Find it difficult to approach others", "Am skilled in handling social situations")
+new = ag(new, "Find it difficult to approach others", "Am skilled in handling social situations", rev2 = T)
 
 # O
 
@@ -136,6 +136,15 @@ new = ag(new, "Find it hard to forgive others", "Get back at people who insult m
 #new = ag(new, "Believe that by working hard a person can achieve anything", "Believe that some people are born lucky", rev2=T)
 # toughmindedness??
 
+### Sam (19/06/20)
+new = ag(new, "Care about others", "Cant be bothered with others needs", rev1 = T)
+new = ag(new, "Have a rich vocabulary", "Like to read")
+new = ag(new, "Feel restless a lot of the time", "Am often bored")
+new = ag(new, "Am not embarrassed easily", "Dont mind others making fun of me")
+new = ag(new, "Dont think about mistakes that I have made", "Am often worried by things that I said or did", rev2 = T) ## rtts both < .60
+new = ag(new, "Support liberal political candidates", "Believe that the poor deserve our sympathy") # + "Believe that we should be tough on crime", rev3 = T
+
+
 new %>% select(-contains(";")) %>% cor %>% as_cordf %>% stretch %>% arrange(desc(abs(r))) %>% filter(!duplicated(r)) %>% slice(1:20)
 
 cors = new %>% cor %>% as_cordf %>% stretch %>% arrange(desc(abs(r))) %>% as.data.frame()
@@ -151,3 +160,19 @@ tmp2 = new %>% select(contains(";")) # 2-item nuances (92)
 redNet = red$network %>% round(3) %>% as_cordf() %>% shave %>% stretch %>% arrange(desc(abs(r)))
 # redRedund = node.redundant.combine(red, type = "sum")
 
+## third items
+
+Stick to the rules                                            Rebel against authority; Respect authority   
+Have frequent mood swings                                                      Am often down in the dumps; Often feel blue  
+Cry easily                                                                     Experience my emotions intensely; Am not easily affected by my emotions 
+Often feel that others misunderstand me                               Feel that people are against me; Often feel that others laugh or talk about me 
+Notice my emotions                                                              Spend time reflecting on things; Often think about my experiences and emotions
+Am afraid of being left alone                                                   Need the approval of others; Need reassurance
+Make careful choices                                                            Act without thinking; Make rash decisions 
+Do not like poetry                                                             Believe in the importance of art; Need a creative outlet
+Am considered to be a wise person                                                 Learn quickly; Am good at many things
+Rarely complain                                                 Am usually a patient person; Hate waiting for anything
+Believe that everyone should have a say                                           Treat all people equally; Treat all ethnicities and religions equally
+Blame others when something goes wrong                                          Insist on getting my way; Feel frustrated when I dont get my own way 
+Get suspicious when someone treats me nicely                                   Believe that others have good intentions; Trust others 
+Believe that we should be tough on crime                                      Support liberal political candidates; Believe that the poor deserve our sympathy
