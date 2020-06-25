@@ -135,13 +135,13 @@ new = ag(new, "Am quick to judge others", "Accept people as they are", rev2 = T)
 new = ag(new, "Find it hard to forgive others", "Get back at people who insult me")
 new = ag(new, "Worry about my health", "Consider myself healthy for my age", rev2 = T)
 new = ag(new, "Feel restless a lot of the time", "Am often bored")
+new = ag(new, "Have a rich vocabulary", "Like to read")
 
 #new = ag(new, "Believe that by working hard a person can achieve anything", "Believe that some people are born lucky", rev2=T)
 # toughmindedness??
 
 ### Sam (19/06/20)
 new = ag(new, "Care about others", "Cant be bothered with others needs", rev1 = T)
-new = ag(new, "Have a rich vocabulary", "Like to read")
 new = ag(new, "Am not embarrassed easily", "Dont mind others making fun of me")
 new = ag(new, "Dont think about mistakes that I have made", "Am often worried by things that I said or did", rev2 = T) ## rtts both < .60
 new = ag(new, "Support liberal political candidates", "Believe that the poor deserve our sympathy") # + "Believe that we should be tough on crime", rev3 = T
